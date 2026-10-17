@@ -9,7 +9,7 @@ import html
 import json
 import math
 import os
-import shutil
+import re
 
 import content as C
 import scene
@@ -109,6 +109,26 @@ def money(lo, hi):
     return f"${lo:,} to ${hi:,}"
 
 
+BTN_RE = re.compile(r'(<(a|button) class="btn[^"]*"[^>]*>)(.*?)(</\2>)', re.S)
+
+
+def btn_fix(html_txt):
+    """Pill buttons: label first, icon in its own circle at the end."""
+    def sub(m):
+        open_tag, _, inner, close = m.groups()
+        if "btn-ic" in inner:
+            return m.group(0)
+        ic = re.match(r'\s*(<svg.*?</svg>)(.*)', inner, re.S)
+        if ic:
+            return f'{open_tag}<span>{ic.group(2).strip()}</span><span class="btn-ic">{ic.group(1)}</span>{close}'
+        return f'{open_tag}<span>{inner.strip()}</span><span class="btn-ic">{icon("arrow-right")}</span>{close}'
+    return BTN_RE.sub(sub, html_txt)
+
+
+def bz(inner, cls=""):
+    return f'<div class="bz {cls}"><div class="core">{inner}</div></div>'
+
+
 # ------------------------------------------------------------------ schema
 def hours_spec():
     return [{"@type": "OpeningHoursSpecification", "dayOfWeek": h["schema"], "opens": h["open"], "closes": h["close"]} for h in S["hours"]]
@@ -162,15 +182,20 @@ NAV = [("Services", "services/"), ("Pricing", "pricing/"), ("Checklist", "checkl
 def header(pre, current):
     links = "".join(
         f'<a href="{pre}{u}"{" aria-current=\"page\"" if current == u else ""}>{n}</a>' for n, u in NAV)
+    mlinks = "".join(f'<a href="{pre}{u}" style="--i:{i}">{n}</a>' for i, (n, u) in enumerate(NAV + [("Get my price", "quote/")]))
     return f"""<header class="head" id="top">
-  <div class="wrap head-in">
+  <div class="head-in">
     <a class="brand" href="{pre or './'}" aria-label="{esc(NAME)} home">{icon('house')}<span>{esc(NAME)}</span></a>
-    <nav class="nav" id="nav" aria-label="Main">{links}<a class="nav-tel" href="tel:+1{S['phone']}">{icon('phone')}{S['phone_show']}</a></nav>
+    <nav class="nav" aria-label="Main">{links}</nav>
     <a class="head-tel" href="tel:+1{S['phone']}" aria-label="Call {S['phone_show']}">{icon('phone')}<span>{S['phone_show']}</span></a>
     <a class="btn btn-go btn-sm head-cta" href="{pre}quote/">Get my price</a>
-    <button class="menu-btn" type="button" aria-expanded="false" aria-controls="nav"><span class="menu-open">{icon('list')}</span><span class="menu-close">{icon('x')}</span><span class="sr">Menu</span></button>
+    <button class="burger" type="button" aria-expanded="false" aria-controls="menu"><span></span><span></span><span class="sr">Menu</span></button>
   </div>
-</header>"""
+</header>
+<div class="menu" id="menu" hidden>
+  <nav class="menu-nav" aria-label="Mobile">{mlinks}</nav>
+  <a class="menu-tel" href="tel:+1{S['phone']}" style="--i:{len(NAV) + 1}">{icon('phone')}{S['phone_show']}</a>
+</div>"""
 
 
 def footer(pre):
@@ -191,6 +216,7 @@ def footer(pre):
     <div><h2>Areas</h2><ul class="plain cols2">{towns}</ul></div>
     <div><h2>Company</h2><ul class="plain"><li><a href="{pre}about/">About us</a></li><li><a href="{pre}faq/">FAQ</a></li><li><a href="{pre}contact/">Contact</a></li><li><a href="{pre}quote/">Get my price</a></li><li><a href="{pre}privacy/">Privacy</a></li></ul></div>
   </div>
+  <p class="foot-mark" aria-hidden="true">{esc(S['short_name'])}</p>
   <div class="wrap foot-base"><p>&copy; {datetime.date.today().year} {esc(NAME)}. {esc(CITY)}, {esc(S['state_name'])}.</p>{note}</div>
 </footer>"""
 
@@ -239,15 +265,15 @@ def page(path, title, desc, main, current="", crumbs=None, schema=None, scripts=
 <link rel="preload" href="{pre}assets/fonts/bricolage.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="{pre}assets/fonts/figtree.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="{pre}assets/site.css?v={ver('assets/site.css')}">
-<script>document.documentElement.classList.add('js');if(!matchMedia('(prefers-reduced-motion: reduce)').matches)document.documentElement.classList.add('motion')</script>
+<script>document.documentElement.classList.add('js','motion');if(matchMedia('(prefers-reduced-motion: reduce)').matches)document.documentElement.classList.add('rm')</script>
 <script type="application/ld+json">{ld}</script>
 {head_extra}</head>
 <body class="{body_class}">
 <a class="skip" href="#main">Skip to content</a>
-{header(pre, current)}
+{btn_fix(header(pre, current))}
 {crumb_html}
 <main id="main">
-{main.replace("{pre}", pre)}
+{btn_fix(main.replace("{pre}", pre))}
 </main>
 {footer(pre)}
 <script src="{pre}assets/site.js?v={ver('assets/site.js')}" defer></script>
@@ -266,8 +292,10 @@ def page(path, title, desc, main, current="", crumbs=None, schema=None, scripts=
 # ------------------------------------------------------------------ blocks
 def faq_block(faqs, heading="Questions people ask", hid="faq-h", more=""):
     items = "".join(
-        f'<details class="qa"><summary><span>{esc(q)}</span>{icon("caret-down")}</summary><p>{esc(a)}</p></details>' for q, a in faqs)
-    return f'<section class="sec faq" aria-labelledby="{hid}"><div class="wrap narrow"><h2 id="{hid}">{heading}</h2><div class="qa-list">{items}</div>{more}</div></section>'
+        f'<details class="qa"><summary><span>{esc(q)}</span><span class="qa-ic">{icon("caret-down")}</span></summary><p>{esc(a)}</p></details>' for q, a in faqs)
+    return (f'<section class="sec faq" aria-labelledby="{hid}"><div class="wrap faq-in">'
+            f'<div class="faq-head" data-r><h2 id="{hid}">{heading}</h2><p>Call or text {S["phone_show"]} if yours isn&#39;t here.</p>{more}</div>'
+            f'<div class="qa-list" data-r>{items}</div></div></section>')
 
 
 def price_table(kinds=("standard", "deep", "move"), freq=None, caption=""):
@@ -276,12 +304,12 @@ def price_table(kinds=("standard", "deep", "move"), freq=None, caption=""):
     rows = ""
     for label, size, b, fb, hb, sq in HOMES:
         if freq:
-            cells = "".join(f"<td>{money(**{k: v for k, v in estimate('standard', b, fb, hb, sq, freq=fq).items() if k in ('lo', 'hi')})}</td>" for fq in freq)
+            cells = "".join(f"<td data-label=\"{esc(P['frequencies'][fq]['label'])}\">{money(**{k: v for k, v in estimate('standard', b, fb, hb, sq, freq=fq).items() if k in ('lo', 'hi')})}</td>" for fq in freq)
         else:
-            cells = "".join(f"<td>{money(**{k: v for k, v in estimate(k2, b, fb, hb, sq).items() if k in ('lo', 'hi')})}</td>" for k2 in kinds)
+            cells = "".join(f"<td data-label=\"{esc(P['types'][k2]['label'])}\">{money(**{k: v for k, v in estimate(k2, b, fb, hb, sq).items() if k in ('lo', 'hi')})}</td>" for k2 in kinds)
         rows += f'<tr><th scope="row">{label}<small>{size}</small></th>{cells}</tr>'
     cap = f"<caption>{esc(caption)}</caption>" if caption else ""
-    return f'<div class="tbl-wrap"><table class="tbl">{cap}<thead><tr><th scope="col">Home</th>{heads}</tr></thead><tbody>{rows}</tbody></table></div>'
+    return f'<div class="tbl-wrap{" one" if len(kinds) == 1 and not freq else ""}"><table class="tbl">{cap}<thead><tr><th scope="col">Home</th>{heads}</tr></thead><tbody>{rows}</tbody></table></div>'
 
 
 def crop_img(name, pre="{pre}", cls="crop", lazy=True):
@@ -291,22 +319,22 @@ def crop_img(name, pre="{pre}", cls="crop", lazy=True):
 
 
 def cta_band(text="Get your price in about a minute"):
-    return f"""<section class="band" aria-labelledby="band-h"><div class="wrap band-in">
+    return f"""<section class="sec band" aria-labelledby="band-h"><div class="wrap" data-r><div class="bz bz-band"><div class="core band-in">
 <h2 id="band-h">{esc(text)}</h2>
 <div class="band-act"><a class="btn btn-dark" href="{{pre}}quote/">Get my price</a><a class="band-tel" href="tel:+1{S['phone']}">or call {S['phone_show']}</a></div>
-</div></section>"""
+</div></div></div></section>"""
 
 
 def checks_for(flag):
     out = ""
     for key, room, tasks in C.CHECKLIST:
-        li = "".join(f"<li>{icon('check')}{esc(t)}</li>" for t, fl in tasks if flag in fl)
-        out += f'<div class="inc-room"><h3>{esc(room)}</h3><ul class="ticks">{li}</ul></div>'
+        li = "".join(f"<li>{icon('check-bold')}<span>{esc(t)}</span></li>" for t, fl in tasks if flag in fl)
+        out += f'<div class="bz inc-room"><div class="core"><h3>{esc(room)}</h3><ul class="ticks">{li}</ul></div></div>'
     return f'<div class="inc-grid">{out}</div>'
 
 
 def not_included():
-    return '<ul class="nots">' + "".join(f"<li>{icon('x')}{esc(t)}</li>" for t in C.NOT_INCLUDED) + "</ul>"
+    return '<ul class="nots">' + "".join(f"<li>{icon('x')}<span>{esc(t)}</span></li>" for t in C.NOT_INCLUDED) + "</ul>"
 
 
 def promise_strip():
@@ -327,83 +355,9 @@ def map_frame(q):
 
 # ------------------------------------------------------------------ home
 def build_home():
-    e3 = E3["standard"]
-    steps = [
-        ("hero", f"""<h1>House cleaning in {esc(CITY)} and nearby suburbs</h1>
-<p class="lede">See your price in about a minute, then book a time that suits you. We bring the supplies.</p>
-<div class="acts"><a class="btn btn-go" href="quote/">Get my price</a><a class="btn btn-line" href="tel:+1{S['phone']}">{icon('phone')}Call {S['phone_show']}</a></div>"""),
-        ("kitchen", '<h2>Kitchen</h2><p>We degrease the stovetop and backsplash, scrub the sink, wipe the counters and appliance fronts, then mop the floor.</p>'),
-        ("bath", '<h2>Bathrooms</h2><p>We scrub the tub, shower and toilet inside and out, clean the mirror and mop the floor on the way out.</p>'),
-        ("bed", '<h2>Bedrooms</h2><p>We dust nightstands, dressers and fan blades, make the beds, and vacuum along the edges where dust collects.</p>'),
-        ("living", '<h2>Living room and floors</h2><p>Winter brings road salt and slush through the front door. We clean the entry, vacuum the couch, dust the shelves and mop the hard floors.</p>'),
-        ("done", f"""<h2>That was a standard clean</h2>
-<p>For a 3-bedroom, 2-bath home of about 1,800 square feet, it costs {money(e3['lo'], e3['hi'])}. A team of two finishes in about {hrs(e3['team_hours'])} hours.</p>
-<div class="acts"><a class="btn btn-go" href="quote/">Get my price</a></div>"""),
-    ]
-    step_html = "".join(f'<div class="step" data-step="{i}" id="step-{k}">{h}</div>' for i, (k, h) in enumerate(steps))
-    story = f"""<section class="story" id="story" aria-label="A house getting cleaned room by room">
-<div class="stage">
-  <div class="wrap stage-in">
-    <div class="steps">{step_html}</div>
-    <div class="scene" id="scene">{scene.scene(True)}</div>
-  </div>
-</div>
-</section>"""
-
-    price_rows = ""
-    for label, size, b, fb, hb, sq in HOMES[1:4]:
-        s_, d_ = estimate("standard", b, fb, hb, sq), estimate("deep", b, fb, hb, sq)
-        price_rows += f'<tr><th scope="row">{label}<small>{size}</small></th><td>{money(s_["lo"], s_["hi"])}</td><td>{money(d_["lo"], d_["hi"])}</td></tr>'
-    prices = f"""<section class="sec prices" aria-labelledby="prices-h"><div class="wrap prices-in">
-<div class="prices-copy">
-  <h2 id="prices-h">What house cleaning costs here</h2>
-  <p>These are our prices for {esc(CITY)} and the towns around it, before add-ons. Booking every two weeks takes 15% off a standard clean.</p>
-  <div class="acts"><a class="btn btn-go" href="quote/">Get my price</a><a class="txt-link" href="pricing/">How we set prices {icon('arrow-right')}</a></div>
-</div>
-<div class="tbl-wrap"><table class="tbl"><thead><tr><th scope="col">Home</th><th scope="col">Standard</th><th scope="col">Deep</th></tr></thead><tbody>{price_rows}</tbody></table></div>
-</div></section>"""
-
-    cells = ""
-    for i, s in enumerate(C.SERVICES):
-        e = estimate(s["type"], freq="biweekly" if s.get("recurring") else "once")
-        cells += f"""<a class="svc svc-{i}" href="services/{s['slug']}/">
-{crop_img(s['crop'], '')}
-<div class="svc-txt"><h3>{esc(s['name'])}</h3><p>{esc(s['card'])}</p><span class="from">From ${e['lo']:,} for a 3-bed, 2-bath home{' per visit' if s.get('recurring') else ''}</span></div></a>"""
-    services = f'<section class="sec" aria-labelledby="svc-h"><div class="wrap"><h2 id="svc-h">Cleaning services</h2><div class="svc-grid">{cells}</div></div></section>'
-
-    how = f"""<section class="sec how" aria-labelledby="how-h"><div class="wrap">
-<h2 id="how-h" class="big">Price it, book it, come home to a clean house.</h2>
-<ol class="how-list">
-<li><h3>{icon('calculator')}Price it</h3><p>Tell us about your home. The price updates as you answer.</p></li>
-<li><h3>{icon('calendar-blank')}Book it</h3><p>Pick a day and an arrival window. We confirm and text you the day before.</p></li>
-<li><h3>{icon('broom')}We clean</h3><p>The team shows up in your window with everything they need. You don't have to be home.</p></li>
-</ol></div></section>"""
-
-    tabs = ""
-    panels = ""
-    for i, (key, room, tasks) in enumerate(C.CHECKLIST):
-        sel = "true" if i == 0 else "false"
-        tabs += f'<button type="button" role="tab" id="tab-{key}" aria-controls="panel-{key}" aria-selected="{sel}"{"" if i == 0 else " tabindex=\"-1\""}>{esc(room)}</button>'
-        std = "".join(f"<li>{icon('check')}{esc(t)}</li>" for t, fl in tasks if "S" in fl)
-        deep = [t for t, fl in tasks if fl.startswith("D")]
-        deep_txt = f'<p class="adds"><strong>A deep clean adds:</strong> {esc("; ".join(t[0].lower() + t[1:] for t in deep))}.</p>' if deep else ""
-        panels += f'<div class="tab-panel" role="tabpanel" id="panel-{key}" aria-labelledby="tab-{key}"{"" if i == 0 else " hidden"}><ul class="ticks">{std}</ul>{deep_txt}</div>'
-    checklist = f"""<section class="sec rooms" aria-labelledby="rooms-h"><div class="wrap rooms-in">
-<div><h2 id="rooms-h">What we clean in each room</h2><p>Here's what a standard clean covers in each room. The full checklist compares standard, deep and move cleans side by side.</p><a class="txt-link" href="checklist/">See the full checklist {icon('arrow-right')}</a></div>
-<div class="tabs" data-tabs><div class="tab-row" role="tablist" aria-label="Rooms">{tabs}</div>{panels}</div>
-</div></section>"""
-
-    area = f"""<section class="sec area" aria-labelledby="area-h"><div class="wrap area-in">
-{map_frame(CITY + ', ' + S['state'])}
-<div><h2 id="area-h">Where we clean</h2><p>We're based in {esc(CITY)} and clean homes in these towns. Enter your ZIP code in the price calculator to check yours.</p>{town_list('')}</div>
-</div></section>"""
-
-    faqs = [(fill(q), fill(a)) for q, a in C.GENERAL_FAQ[:6]]
-    more = '<p class="more-faq"><a class="txt-link" href="faq/">All questions and answers ' + icon('arrow-right') + "</a></p>"
-    main = story + promise_strip() + prices + services + how + checklist + area + faq_block(faqs, more=more) + cta_band()
-    page("index.html", f"House Cleaning in {CITY}, IL | {NAME}",
-         f"House cleaning in {CITY}, Aurora, Wheaton and nearby suburbs. See your price in a minute and book online. Standard cleans from ${E3['standard']['lo']} for a 3-bed, 2-bath home.",
-         main, "", None, [faq_schema(faqs)], ["vendor/gsap.min.js", "vendor/ScrollTrigger.min.js", "story.js"], "home", "1.0")
+    import sys
+    import home_tpl
+    home_tpl.build_home(sys.modules[__name__])
 
 
 # ------------------------------------------------------------------ services
@@ -411,8 +365,8 @@ def build_services():
     cells = ""
     for i, s in enumerate(C.SERVICES):
         e = estimate(s["type"], freq="biweekly" if s.get("recurring") else "once")
-        cells += f"""<a class="svc svc-{i}" href="{s['slug']}/">{crop_img(s['crop'], '{pre}')}
-<div class="svc-txt"><h2>{esc(s['name'])}</h2><p>{esc(s['card'])}</p><span class="from">From ${e['lo']:,} for a 3-bed, 2-bath home{' per visit' if s.get('recurring') else ''}</span></div></a>"""
+        cells += f"""<a class="bz svc svc-{i}" href="{s['slug']}/" data-r><div class="core"><div class="svc-art">{crop_img(s['crop'], '{pre}')}</div>
+<div class="svc-txt"><h2>{esc(s['name'])}</h2><p>{esc(s['card'])}</p><p class="from"><span>From ${e['lo']:,}{' per visit' if s.get('recurring') else ''}</span><span class="svc-go">{icon('arrow-up-right')}</span></p></div></div></a>"""
     main = f"""<section class="sec page-top"><div class="wrap">
 <h1>House cleaning services</h1>
 <p class="lede">We offer four kinds of house cleaning in {esc(CITY)} and nearby towns. Each one has a fixed price you can see before you book.</p>
@@ -437,7 +391,7 @@ def build_services():
         main = f"""<section class="sec page-top"><div class="wrap svc-head">
 <div><h1>{esc(s['h1'])}</h1><p class="lede">{esc(fill(s['lede'], ex))}</p>
 <div class="acts"><a class="btn btn-go" href="{{pre}}quote/?type={kind}{'&amp;freq=biweekly' if s.get('recurring') else ''}">Get my price</a><a class="btn btn-line" href="tel:+1{S['phone']}">{icon('phone')}Call {S['phone_show']}</a></div></div>
-{crop_img(s['crop'], '{pre}', 'crop crop-lg', False)}
+{bz(crop_img(s['crop'], '{pre}', 'crop crop-lg', False), 'bz-img')}
 </div></section>
 <section class="sec"><div class="wrap prose-grid">
 <div class="prose">{body}
@@ -509,7 +463,7 @@ def build_checklist():
     for key, room, tasks in C.CHECKLIST:
         rows = ""
         for task, fl in tasks:
-            cells = "".join(f'<td>{icon("check") + "<span class=sr>Included</span>" if k in fl else "<span class=dash aria-label=\"Not included\"></span>"}</td>' for k in "SDM")
+            cells = "".join(f'<td data-label="{lab}" class="{"yes" if k in fl else "no"}">{icon("check-bold") + "<span class=sr>Included</span>" if k in fl else "<span class=dash></span><span class=sr>Not included</span>"}</td>' for k, lab in zip("SDM", ("Standard", "Deep", "Move")))
             rows += f'<tr><th scope="row">{esc(task)}</th>{cells}</tr>'
         tables += f'<h2 id="{key}">{esc(room)}</h2><div class="tbl-wrap"><table class="tbl tbl-check"><thead><tr><th scope="col">Task</th><th scope="col">Standard</th><th scope="col">Deep</th><th scope="col">Move</th></tr></thead><tbody>{rows}</tbody></table></div>'
     jump = " ".join(f'<a href="#{k}">{esc(r)}</a>' for k, r, _ in C.CHECKLIST)
@@ -599,7 +553,7 @@ def build_about():
     main = f"""<section class="sec page-top"><div class="wrap svc-head">
 <div><h1>About {esc(NAME)}</h1>
 <p class="lede">We're a house cleaning company based in {esc(CITY)}, {esc(S['state_name'])}. We clean homes in {esc(CITY)} and {len(S['towns']) - 1} towns around it, and we publish our prices so you know the cost before anyone walks through your door.</p></div>
-{crop_img('living', '{pre}', 'crop crop-lg', False)}
+{bz(crop_img('living', '{pre}', 'crop crop-lg', False), 'bz-img')}
 </div></section>
 <section class="sec"><div class="wrap narrow prose">
 <h2>How we work</h2>
@@ -620,7 +574,7 @@ def request_form(kind):
 <div class="fld"><label for="{kind}-alt">Second choice day <span class="opt">optional</span></label><input id="{kind}-alt" name="alt_date" type="date"></div>
 <div class="fld"><label for="{kind}-addr">Street address</label><input id="{kind}-addr" name="address" autocomplete="street-address" required><p class="err" id="{kind}-addr-err"></p></div>""" if kind == "book" else ""
     msg_label = "Anything we should know? <span class=\"opt\">optional</span>" if kind == "book" else "How can we help?"
-    return f"""<form class="req" id="{kind}-form" data-kind="{kind}" novalidate>
+    return f"""<div class="bz req-wrap"><div class="core"><form class="req" id="{kind}-form" data-kind="{kind}" novalidate>
 <div class="fld-grid">
 <div class="fld"><label for="{kind}-name">Your name</label><input id="{kind}-name" name="name" autocomplete="name" required><p class="err" id="{kind}-name-err"></p></div>
 <div class="fld"><label for="{kind}-phone">Mobile phone</label><input id="{kind}-phone" name="phone" type="tel" autocomplete="tel" inputmode="tel" required><p class="err" id="{kind}-phone-err"></p></div>
@@ -630,7 +584,7 @@ def request_form(kind):
 <input type="hidden" name="quote" value="">
 <button class="btn btn-go" type="submit">{'Send booking request' if kind == 'book' else 'Send message'}</button>
 <p class="form-note" role="status" aria-live="polite"></p>
-</form>"""
+</form></div></div>"""
 
 
 def build_contact():
@@ -645,7 +599,7 @@ def build_contact():
 <li>{icon('clock')}<ul class="plain">{hours}</ul></li>
 <li>{icon('map-pin')}<span>Based in {esc(CITY)}, {esc(S['state'])}. <a href="{{pre}}areas/">See the towns we serve</a>.</span></li>
 </ul></div>
-<div class="panel"><h2>Send a message</h2>{request_form('contact')}</div>
+<div class="panel"><h2 class="sr">Send a message</h2>{request_form('contact')}</div>
 </div></section>"""
     page("contact/index.html", f"Contact {NAME}", f"Call, text or email {NAME} in {CITY}, IL. {S['phone_show']}.",
          main, "", [("Contact", "contact/")], [{"@type": "ContactPage", "url": BASE + "contact/", "about": {"@id": BIZ_ID}}],
@@ -696,8 +650,8 @@ def build_quote():
 <fieldset><legend>Pets</legend><label class="check solo"><input type="checkbox" name="pets" value="1"><span class="check-txt">Cats or dogs live here</span><span class="check-price">+${p['pets']}</span></label></fieldset>
 <fieldset><legend>Add-ons</legend><div class="checks">{addons}</div></fieldset>
 </form>
-<aside class="result" id="result" aria-live="polite">
-<div class="result-in">
+<aside class="result bz" id="result" aria-live="polite">
+<div class="core">
 <p class="result-label">Your price</p>
 <p class="result-price"><span id="r-price">$0</span><span class="result-per" id="r-per"></span></p>
 <p class="result-time" id="r-time"></p>
@@ -709,7 +663,7 @@ def build_quote():
 </div></section>
 <section class="sec book-sec" id="book" aria-labelledby="book-h"><div class="wrap narrow-l">
 <h2 id="book-h">Book your cleaning</h2>
-<div class="book-sum" id="book-sum"></div>
+<div class="bz book-sum"><div class="core" id="book-sum"></div></div>
 {cal_or_form}
 </div></section>"""
     sd = json.dumps(site_data())
