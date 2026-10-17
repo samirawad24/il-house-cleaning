@@ -1,0 +1,24 @@
+# Prairie Home Cleaning
+
+> House cleaning company based in Naperville, Illinois. Serves Naperville, Aurora, Wheaton, Lisle, Downers Grove, Bolingbrook, Plainfield, Oswego. Published prices, online price calculator and online booking.
+
+- Phone: (630) 555-0142
+- Email: hello@example.com
+- Hours: Monday to Friday 8 am to 5 pm; Saturday 9 am to 2 pm
+- Prices (3-bed, 2-bath, about 1,800 sq ft): standard $220 to $255, deep $355 to $410, move-in/move-out $410 to $475.
+- Recurring discounts on standard cleans: weekly 20%, every 2 weeks 15%, every 4 weeks 10%.
+- Supplies: the team brings all supplies and equipment.
+- Policies: Reschedule or cancel up to 48 hours before your arrival window at no charge. Inside 48 hours we charge a $50 fee. We charge your card after the cleaning is done. No deposit to book.
+
+## Pages
+
+- [Price calculator and booking](https://samirawad24.github.io/il-house-cleaning/quote/): exact price for a home by bedrooms, bathrooms, square feet, condition, frequency and add-ons
+- [Pricing](https://samirawad24.github.io/il-house-cleaning/pricing/): full price table, pricing formula, add-ons and discounts
+- [Cleaning checklist](https://samirawad24.github.io/il-house-cleaning/checklist/): room-by-room tasks for standard, deep and move cleans
+- [Standard cleaning](https://samirawad24.github.io/il-house-cleaning/services/standard-cleaning/): Kitchen, bathrooms, bedrooms and living areas, top to bottom. For homes that get cleaned regularly.
+- [Deep cleaning](https://samirawad24.github.io/il-house-cleaning/services/deep-cleaning/): Everything in a standard clean plus baseboards, grout, vents, the range hood and the buildup in corners.
+- [Move-in and move-out cleaning](https://samirawad24.github.io/il-house-cleaning/services/move-out-cleaning/): For empty homes. Inside cabinets, closets, the oven and the fridge, plus everything in a deep clean.
+- [Weekly and biweekly cleaning](https://samirawad24.github.io/il-house-cleaning/services/recurring-cleaning/): A standard clean on a schedule. Weekly saves 20%, every two weeks 15%, every four weeks 10%.
+- [Service areas](https://samirawad24.github.io/il-house-cleaning/areas/): Naperville, Aurora, Wheaton, Lisle, Downers Grove, Bolingbrook, Plainfield, Oswego
+- [FAQ](https://samirawad24.github.io/il-house-cleaning/faq/)
+- [Contact](https://samirawad24.github.io/il-house-cleaning/contact/)

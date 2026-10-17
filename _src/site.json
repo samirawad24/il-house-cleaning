@@ -1,0 +1,96 @@
+{
+  "_README": "Every business fact on the site comes from this file. Edit it, then run: python _src/build.py. Keys starting with _ are notes and are ignored.",
+  "_PLACEHOLDERS": "Everything below is a placeholder until the client confirms it. Set preview to false only after name, phone, email, towns, prices and promises are real.",
+
+  "preview": true,
+  "base_url": "https://samirawad24.github.io/il-house-cleaning/",
+
+  "name": "Prairie Home Cleaning",
+  "short_name": "Prairie Home",
+  "phone": "6305550142",
+  "phone_show": "(630) 555-0142",
+  "sms": "6305550142",
+  "email": "hello@example.com",
+  "home_city": "Naperville",
+  "state": "IL",
+  "state_name": "Illinois",
+  "home_zip": "60540",
+  "founded": "",
+  "hours": [
+    {"days": "Monday to Friday", "schema": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"], "open": "08:00", "close": "17:00", "show": "8 am to 5 pm"},
+    {"days": "Saturday", "schema": ["Saturday"], "open": "09:00", "close": "14:00", "show": "9 am to 2 pm"}
+  ],
+  "arrival_windows": ["8:00 to 9:00 am", "11:00 am to noon", "2:00 to 3:00 pm"],
+  "same_as": [],
+
+  "_booking": "cal_link is the Cal.com path, like 'prairie-home/cleaning'. Leave it empty and the site shows a request form instead. form_endpoint is a Formspree or FormSubmit URL; leave it empty and forms open the visitor's email app.",
+  "cal_link": "",
+  "form_endpoint": "",
+
+  "promises": [
+    {"icon": "shield-check", "title": "Insured and bonded", "text": "Our liability coverage protects your home while we work."},
+    {"icon": "broom", "title": "We bring supplies", "text": "Vacuums, mops, cloths and products come with us."},
+    {"icon": "sparkle", "title": "24-hour re-clean", "text": "Missed a spot? Tell us within a day and we come back for free."},
+    {"icon": "chat-text", "title": "Text before we arrive", "text": "You get a text when the team is on the way."}
+  ],
+  "policies": {
+    "cancel": "Reschedule or cancel up to 48 hours before your arrival window at no charge. Inside 48 hours we charge a $50 fee.",
+    "payment": "We charge your card after the cleaning is done. No deposit to book.",
+    "keys": "You don't need to be home. Most customers leave a door code or a lockbox key."
+  },
+
+  "towns": [
+    {"name": "Naperville", "slug": "naperville", "county": "DuPage and Will", "zips": ["60540", "60563", "60564", "60565"], "note": ""},
+    {"name": "Aurora", "slug": "aurora", "county": "Kane, DuPage, Kendall and Will", "zips": ["60502", "60503", "60504", "60505", "60506"], "note": ""},
+    {"name": "Wheaton", "slug": "wheaton", "county": "DuPage", "zips": ["60187", "60189"], "note": ""},
+    {"name": "Lisle", "slug": "lisle", "county": "DuPage", "zips": ["60532"], "note": ""},
+    {"name": "Downers Grove", "slug": "downers-grove", "county": "DuPage", "zips": ["60515", "60516"], "note": ""},
+    {"name": "Bolingbrook", "slug": "bolingbrook", "county": "Will and DuPage", "zips": ["60440", "60490"], "note": ""},
+    {"name": "Plainfield", "slug": "plainfield", "county": "Will and Kendall", "zips": ["60544", "60585", "60586"], "note": ""},
+    {"name": "Oswego", "slug": "oswego", "county": "Kendall", "zips": ["60543"], "note": ""}
+  ],
+
+  "_pricing": "Market defaults for the west Chicago suburbs, 2026. Replace with the client's own numbers. The calculator, the price tables and llms.txt all read from here.",
+  "pricing": {
+    "base": 80,
+    "per_bedroom": 22,
+    "per_full_bath": 30,
+    "per_half_bath": 15,
+    "sqft_included": 1000,
+    "per_extra_sqft": 0.035,
+    "min_price": 129,
+    "types": {
+      "standard": {"label": "Standard", "mult": 1.0},
+      "deep": {"label": "Deep", "mult": 1.6},
+      "move": {"label": "Move-in / move-out", "mult": 1.85}
+    },
+    "conditions": {
+      "kept": {"label": "Kept up", "mult": 1.0},
+      "behind": {"label": "A bit behind", "mult": 1.15},
+      "while": {"label": "It's been a while", "mult": 1.3}
+    },
+    "pets": 15,
+    "frequencies": {
+      "once": {"label": "One time", "discount": 0},
+      "weekly": {"label": "Weekly", "discount": 0.2},
+      "biweekly": {"label": "Every 2 weeks", "discount": 0.15},
+      "monthly": {"label": "Every 4 weeks", "discount": 0.1}
+    },
+    "addons": [
+      {"id": "oven", "label": "Inside the oven", "price": 35, "included": ["move"]},
+      {"id": "fridge", "label": "Inside the fridge", "price": 35, "included": ["move"]},
+      {"id": "cabinets", "label": "Inside kitchen cabinets", "price": 45, "included": ["move"]},
+      {"id": "baseboards", "label": "Hand-wiped baseboards", "price": 30, "included": ["deep", "move"]},
+      {"id": "walls", "label": "Wall spot cleaning", "price": 25, "included": ["deep", "move"]},
+      {"id": "windows", "label": "Inside windows, up to 15", "price": 60, "included": []},
+      {"id": "basement", "label": "Finished basement", "price": 55, "included": []},
+      {"id": "laundry", "label": "One load of laundry, washed and folded", "price": 20, "included": []},
+      {"id": "garage", "label": "Garage sweep", "price": 30, "included": []}
+    ],
+    "range_low": 0.95,
+    "range_high": 1.1,
+    "round_to": 5,
+    "rate_per_cleaner_hour": 48,
+    "team_size": 2
+  }
+}
